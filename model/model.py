@@ -155,3 +155,14 @@ def apply_rotary_pos_emb(
         rotate_half(k) * sin.unsqueeze(unsqueeze_dim)
     )
     return q_embed, k_embed
+
+def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
+    bs, slen, num_key_value_heads, head_dim = x.shape
+    if n_rep == 1:
+        return x
+
+    return (
+        x[:, :, :, None, :]
+        .expand(bs, slen, num_key_value_heads, n_rep, head_dim)
+        .reshape(bs, slen, num_key_value_heads * n_rep, head_dim)
+    )
