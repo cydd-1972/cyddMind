@@ -304,7 +304,7 @@ class FeedForward(nn.Module):
 
 
 class MoEGate(nn.Module):
-    def __init__(self, config: MokioMindConfig):
+    def __init__(self, config: CyddMindConfig):
         super().__init__()
         self.config = config
         self.top_k = config.num_experts_per_tok
@@ -373,7 +373,7 @@ class MoEGate(nn.Module):
         return topk_weight, topk_idx, aux_loss
 
 class MoEFeedForaward(nn.Module):
-    def __init__(self, config: MokioMindConfig):
+    def __init__(self, config: CyddMindConfig):
         super().__init__()
         self.config = config
         # 专家层
