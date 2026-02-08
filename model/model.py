@@ -609,14 +609,22 @@ class CyddMindForCausalLM(PreTrainedModel, GenerationMixin):
             use_cache=use_cache,
             **args,
         )
-
+        # 确定要计算哪些位置的logits
+        # 情况1（训练）：logits_to_keep=0 → slice(None) → 计算所有token
+        # 情况2（生成）：logits_to_keep=1 → slice(-1, None) → 只计算最后一个token
+        # 情况3（特定）：logits_to_keep=torch.tensor([2, 5, -1]) → 计算第2、5、最后一个token
         slice_indices = (
+            # 如果是整数：取最后logits_to_keep个token
+            # 生成时通常 logits_to_keep=1，只计算最后一个token
             slice(-logits_to_keep, None)
             if isinstance(logits_to_keep, int)
+            # 如果是张量：使用自定义的索引
             else logits_to_keep
         )
+        # 通过线性层将隐藏状态映射到词汇表空间
         logits = self.lm_head(h[:, slice_indices, :])
 
+        # 返回HuggingFace标准格式的输出对象
         return CausalLMOutputWithPast(
             logits=logits,
             past_key_values=past_kvs,
