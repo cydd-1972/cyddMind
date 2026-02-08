@@ -583,3 +583,42 @@ class MokioMindModel(nn.Module):
         )
 
         return hidden_states, presents, aux_loss
+
+class CyddMindForCausalLM(PreTrainedModel, GenerationMixin):
+    config_class = CyddMindConfig
+
+    def __init__(self, config: CyddMindConfig):
+        super().__init__(config)
+        self.model = MokioMindModel(config)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.model.embed_tokens.weight = self.lm_head.weight
+
+    def forward(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
+        use_cache: bool = False,
+        logits_to_keep: Union[int, torch.Tensor] = 0,
+        **args,
+    ):
+        h, past_kvs, aux_loss = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            past_key_values=past_key_values,
+            use_cache=use_cache,
+            **args,
+        )
+
+        slice_indices = (
+            slice(-logits_to_keep, None)
+            if isinstance(logits_to_keep, int)
+            else logits_to_keep
+        )
+        logits = self.lm_head(h[:, slice_indices, :])
+
+        return CausalLMOutputWithPast(
+            logits=logits,
+            past_key_values=past_kvs,
+            hidden_states=h,
+        )
